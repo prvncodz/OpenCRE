@@ -370,8 +370,7 @@ h1.ui.header.chatbot-title {
   }
 
   &:disabled {
-    background: #2185d0;
-    color: #fff;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 }

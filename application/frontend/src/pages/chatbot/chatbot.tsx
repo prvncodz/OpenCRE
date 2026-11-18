@@ -41,36 +41,32 @@ export const Chatbot = () => {
   const [user, setUser] = useState('');
   const [modelName, setModelName] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
 
   function growTextarea() {
     const el = textareaRef.current;
     if (!el) return;
     const container = messagesContainerRef.current;
-    const wasNearBottom = container
+    const isNearBottom = container
       ? container.scrollHeight - container.scrollTop - container.clientHeight < 64
       : false;
 
+    const prevHeight = el.offsetHeight;
     el.style.height = 'auto';
     const newHeight = Math.min(el.scrollHeight, 200);
     el.style.height = `${newHeight}px`;
 
-    const inputContainer = el.closest('.chat-input') as HTMLElement | null;
-    if (inputContainer) {
-      const surface = inputContainer.closest('.chat-surface') as HTMLElement | null;
-      if (surface) {
-        surface.style.setProperty('--composer-height', `${inputContainer.offsetHeight}px`);
+    if (newHeight !== prevHeight) {
+      if (el.parentElement) {
+        surfaceRef.current?.style.setProperty('--composer-height', `${el.parentElement.offsetHeight}px`);
       }
-    }
-
-    if (container) {
-      if (wasNearBottom) {
-        container.scrollTop = container.scrollHeight;
-        setShowScrollToBottom(false);
-      } else {
-        const threshold = 64;
-        const isNearBottom =
-          container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
-        setShowScrollToBottom(!isNearBottom);
+      if (container) {
+        if (isNearBottom) {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'auto' });
+          setShowScrollToBottom(false);
+        } else {
+          setShowScrollToBottom(container.scrollHeight - container.scrollTop - container.clientHeight >= 64);
+        }
       }
     }
   }
@@ -177,13 +173,7 @@ export const Chatbot = () => {
     setLoading(true);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      const inputContainer = textareaRef.current.closest('.chat-input') as HTMLElement | null;
-      if (inputContainer) {
-        const surface = inputContainer.closest('.chat-surface') as HTMLElement | null;
-        if (surface) {
-          surface.style.setProperty('--composer-height', `${inputContainer.offsetHeight}px`);
-        }
-      }
+      surfaceRef.current?.style.removeProperty('--composer-height');
       textareaRef.current.focus();
     }
 
@@ -280,7 +270,7 @@ export const Chatbot = () => {
 
           <Container>
             <div className={`chat-container ${hasMessages ? 'chat-active' : 'chat-landing'}`}>
-              <div className="chat-surface">
+              <div className="chat-surface" ref={surfaceRef}>
                 {' '}
                 {error && (
                   <div className="ui negative message">
@@ -356,14 +346,10 @@ export const Chatbot = () => {
                       growTextarea();
                     }}
                     onKeyDown={(e) => {
-                      if (e.nativeEvent.isComposing || e.keyCode === 229) {
-                        return;
-                      }
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        if (!loading) {
-                          onSubmit();
-                        }
+                        onSubmit();
                       }
                     }}
                   />
